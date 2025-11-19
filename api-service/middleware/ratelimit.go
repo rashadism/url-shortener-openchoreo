@@ -27,7 +27,7 @@ func RateLimit(requests, window int) gin.HandlerFunc {
 				// Try to extract API key from JSON
 				var req models.CreateURLRequest
 				if json.Unmarshal(bodyBytes, &req) == nil {
-					apiKey = req.APIKey
+					apiKey = req.Username
 				}
 			}
 		}
