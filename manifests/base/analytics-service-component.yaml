@@ -39,8 +39,6 @@ spec:
           value: "7544"
         - key: DATABASE_URL
           value: "postgresql://urlshortener:password123@postgres:80/urlshortener"
-        - key: REDIS_URL
-          value: "redis://redis:80"
 
 ---
 

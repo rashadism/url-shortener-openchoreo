@@ -11,12 +11,11 @@ A distributed URL shortener application built for testing Root Cause Analysis (R
    - Handles redirects
    - Rate limiting via Redis
    - Fetches link metadata (external HTTP calls)
-   - GeoIP lookups (external API calls)
 
 2. **Analytics Service** (Python/FastAPI - Port 7544)
    - Aggregates click analytics
    - Complex database queries with joins
-   - Multi-layer caching (Redis)
+   - Direct PostgreSQL queries (no caching)
    - Time-series data analysis
 
 3. **Frontend** (React - Port 7545 dev, Port 80 production)
@@ -30,10 +29,10 @@ A distributed URL shortener application built for testing Root Cause Analysis (R
 - **PostgreSQL** (Port 5432) - Primary database
   - Tables: users, urls, clicks
 
-- **Redis** (Port 6379) - Cache and rate limiting
-  - URL mappings cache
-  - Analytics aggregation cache
+- **Redis** (Port 6379) - Cache and rate limiting (API Service only)
+  - URL mappings cache (2 minute TTL)
   - Rate limit counters
+  - Click counters
 
 ## Integration Chains (RCA Testing Scenarios)
 
@@ -49,7 +48,6 @@ Frontend → API Service → PostgreSQL (insert URL)
 ```
 Browser → API Service → Redis (lookup - L1 cache)
                       → [cache miss] → PostgreSQL (fallback)
-                      → External GeoIP API (can timeout/fail)
                       → PostgreSQL (insert click record)
                       → Redis (update counters)
                       → HTTP 302 redirect
@@ -57,9 +55,8 @@ Browser → API Service → Redis (lookup - L1 cache)
 
 ### Analytics Flow
 ```
-Frontend → Analytics Service → Redis (check cache)
-                             → [cache miss] → PostgreSQL (complex queries)
-                             → Redis (write cache)
+Frontend → Analytics Service → PostgreSQL (complex queries)
+                             → Always fresh data (no caching)
 ```
 
 ## Setup Instructions
@@ -159,7 +156,10 @@ docker run -d \
   -e PORT=7543 \
   -e RATE_LIMIT_REQUESTS=100 \
   -e RATE_LIMIT_WINDOW=60 \
+  -e CACHE_TTL=120 \
   rashadxyz/url-shortener-api
+
+# Note: Code defaults are RATE_LIMIT_REQUESTS=5 and CACHE_TTL=120 (2 minutes)
 ```
 
 **Local Development**:
@@ -184,7 +184,6 @@ docker run -d \
   --name url-shortener-analytics \
   -p 7544:7544 \
   -e DATABASE_URL="postgresql://urlshortener:password123@host.docker.internal:5432/urlshortener" \
-  -e REDIS_URL="redis://host.docker.internal:6379" \
   -e PORT=7544 \
   rashadxyz/url-shortener-analytics
 ```
@@ -194,7 +193,7 @@ docker run -d \
 cd analytics-service
 pip install -r requirements.txt
 DATABASE_URL="postgresql://urlshortener:password123@localhost:5432/urlshortener" \
-REDIS_URL="redis://localhost:6379" \
+PORT=7544 \
 python main.py
 ```
 
@@ -235,19 +234,19 @@ npm run dev
 ### API Endpoints
 
 **API Service (Port 7543)**:
-- `POST /api/urls` - Create short URL
-- `GET /api/urls?api_key={key}` - List URLs
+- `POST /api/urls` - Create short URL (requires username in body)
+- `GET /api/urls?username={username}` - List URLs for user
 - `GET /{code}` - Redirect to long URL
 - `GET /health` - Health check
 
 **Analytics Service (Port 7544)**:
-- `GET /api/analytics/summary?api_key={key}` - Overall stats
-- `GET /api/analytics/top-urls?api_key={key}` - Top URLs by clicks
-- `GET /api/analytics/geo-distribution?api_key={key}` - Geographic data
-- `GET /api/analytics/time-series?api_key={key}&days=7` - Time series data
+- `GET /api/analytics/summary?username={username}` - Overall stats
+- `GET /api/analytics/top-urls?username={username}` - Top URLs by clicks
+- `GET /api/analytics/time-series?username={username}&days=7` - Time series data
+- `GET /api/analytics/url/{url_id}?username={username}` - Detailed URL analytics
 - `GET /health` - Health check
 
-**Default API Key**: `test-api-key-12345`
+**Default Username**: `testuser`
 
 ## Failure Scenarios for RCA Testing
 
@@ -263,7 +262,6 @@ This application is designed to test RCA tools with various failure modes:
 - Query timeouts
 
 ### 3. External API Timeouts
-- GeoIP API calls (in redirect flow) can timeout
 - Link metadata fetching (in URL creation) can timeout
 - Network delays cascading through the system
 
@@ -282,8 +280,8 @@ This application is designed to test RCA tools with various failure modes:
 - Redis memory limits
 
 ### 7. Service Dependencies
-- API Service depends on: PostgreSQL, Redis, External APIs
-- Analytics Service depends on: PostgreSQL, Redis
+- API Service depends on: PostgreSQL (required), Redis (optional - graceful degradation), External metadata API (optional)
+- Analytics Service depends on: PostgreSQL (required)
 - Frontend depends on: API Service, Analytics Service
 
 ## Monitoring & Observability
@@ -317,21 +315,11 @@ sample-app/
 │       ├── main.jsx
 │       ├── App.jsx
 │       └── index.css
-├── k8s/
-│   ├── namespace.yaml
-│   ├── configmap.yaml
-│   ├── secrets.yaml
-│   ├── postgres-*.yaml
-│   ├── redis-*.yaml
-│   ├── api-service-*.yaml
-│   ├── analytics-service-*.yaml
-│   ├── frontend-*.yaml
-│   └── README.md
 ├── manifests/
 │   ├── kustomization.yaml    # Kustomize configuration
 │   ├── vars.yaml             # All configurable variables
 │   ├── README.md             # Kustomize documentation
-│   └── base/                 # Base manifests
+│   └── base/                 # OpenChoreo manifests
 │       ├── url-shortener-demo-project.yaml
 │       ├── api-service-component.yaml
 │       ├── analytics-service-component.yaml
@@ -420,9 +408,7 @@ See `manifests/README.md` for detailed Kustomize documentation and all configura
 
 ### Kubernetes Deployment
 
-For detailed Kubernetes deployment instructions, see the [k8s/README.md](k8s/README.md) file.
-
-Quick start with Kubernetes:
+Use the OpenChoreo manifests with Kustomize for Kubernetes deployment:
 
 ```bash
 # Pull images from Docker Hub (or build and push using ./build-and-push.sh)
@@ -430,16 +416,16 @@ docker pull rashadxyz/url-shortener-api:latest
 docker pull rashadxyz/url-shortener-analytics:latest
 docker pull rashadxyz/url-shortener-frontend:latest
 
-# Deploy to Kubernetes
-kubectl apply -f k8s/
+# Deploy to Kubernetes using Kustomize
+kubectl apply -k manifests/
 
 # Check status
-kubectl get pods -n url-shortener
+kubectl get pods
 
 # Access services (with port-forward)
-kubectl port-forward -n url-shortener svc/frontend 7545:80
-kubectl port-forward -n url-shortener svc/api-service 7543:7543
-kubectl port-forward -n url-shortener svc/analytics-service 7544:7544
+kubectl port-forward svc/frontend 7545:80
+kubectl port-forward svc/api-service 7543:80
+kubectl port-forward svc/analytics-service 7544:80
 ```
 
 ## Testing RCA Scenarios

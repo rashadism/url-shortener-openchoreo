@@ -38,12 +38,12 @@ A distributed URL shortener application built for testing Root Cause Analysis (R
 Frontend → API Service → PostgreSQL (insert URL)
                       → External HTTP (fetch metadata - can timeout)
                       → PostgreSQL (update metadata)
-                      → Redis (cache URL for 1 minute)
+                      → Redis (cache URL for 2 minutes)
 ```
 
 ### Click/Redirect Flow
 ```
-Browser → API Service → Redis (L1 cache lookup - 1 minute TTL)
+Browser → API Service → Redis (L1 cache lookup - 2 minute TTL)
                       → PostgreSQL (fallback on cache miss)
                       → PostgreSQL (insert click record)
                       → Redis (increment click counter)
@@ -209,24 +209,13 @@ npm run preview
 **Build Docker Image**:
 ```bash
 cd frontend
+docker build -t rashadxyz/url-shortener-frontend .
 
-# For standard Kubernetes deployment (services on native ports)
-docker build \
-  --build-arg VITE_API_URL=http://api-service:7543 \
-  --build-arg VITE_ANALYTICS_URL=http://analytics-service:7544 \
-  -t rashadxyz/url-shortener-frontend .
-
-# For OpenChoreo deployment (all services on port 80)
-docker build \
-  --build-arg VITE_API_URL=http://api-service:80 \
-  --build-arg VITE_ANALYTICS_URL=http://analytics-service:80 \
-  -t rashadxyz/url-shortener-frontend .
-
-# For local development (services on localhost)
-docker build \
-  --build-arg VITE_API_URL=http://localhost:7543 \
-  --build-arg VITE_ANALYTICS_URL=http://localhost:7544 \
-  -t rashadxyz/url-shortener-frontend .
+# Frontend uses relative URLs with nginx reverse proxy
+# nginx.conf proxies:
+#   /api/ → api-service:80
+#   /api/analytics/ → analytics-service:80
+# This works across all deployment environments (local, k8s, OpenChoreo)
 ```
 
 **Run Container**:
@@ -281,17 +270,16 @@ docker pull rashadxyz/url-shortener-frontend:latest
 
 ### Deploy to Kubernetes
 ```bash
-# Deploy all resources
-kubectl apply -f k8s/
+# Deploy all resources using Kustomize
+kubectl apply -k manifests/
 
 # Check status
-kubectl get pods -n url-shortener
-kubectl get svc -n url-shortener
+kubectl get pods
 
 # Access services (with port-forward)
-kubectl port-forward -n url-shortener svc/frontend 7545:80
-kubectl port-forward -n url-shortener svc/api-service 7543:7543
-kubectl port-forward -n url-shortener svc/analytics-service 7544:7544
+kubectl port-forward svc/frontend 7545:80
+kubectl port-forward svc/api-service 7543:80
+kubectl port-forward svc/analytics-service 7544:80
 ```
 
 ### OpenChoreo Deployment
@@ -300,18 +288,7 @@ kubectl port-forward -n url-shortener svc/analytics-service 7544:7544
 - In OpenChoreo, `componentType: deployment/service` exposes services on **port 80** by default
 - The `spec.parameters.port` value is the **targetPort** (container port)
 - Inter-service communication uses `service-name:80` (e.g., `postgres:80`, `redis:80`, `api-service:80`)
-- Frontend must be built with OpenChoreo-specific URLs:
-
-```bash
-# Build frontend for OpenChoreo (services on port 80)
-cd frontend
-docker build \
-  --build-arg VITE_API_URL=http://api-service:80 \
-  --build-arg VITE_ANALYTICS_URL=http://analytics-service:80 \
-  -t rashadxyz/url-shortener-frontend:latest .
-docker push rashadxyz/url-shortener-frontend:latest
-cd ..
-```
+- Frontend uses nginx reverse proxy to handle service communication (no build-time configuration needed)
 
 **Deploy OpenChoreo Manifests**:
 ```bash
@@ -411,30 +388,30 @@ kubectl delete namespace url-shortener
 ## API Endpoints
 
 ### API Service (Port 7543)
-- `POST /api/urls` - Create short URL (requires api_key in body)
-- `GET /api/urls?api_key={key}` - List URLs
+- `POST /api/urls` - Create short URL (requires username in body)
+- `GET /api/urls?username={username}` - List URLs for user
 - `GET /{code}` - Redirect to long URL (tracks click)
 - `GET /health` - Health check (DB + Redis)
 
 ### Analytics Service (Port 7544)
-- `GET /api/analytics/summary?api_key={key}` - Overall stats
-- `GET /api/analytics/top-urls?api_key={key}&limit=10` - Top URLs by clicks
-- `GET /api/analytics/time-series?api_key={key}&days=7` - Time series data
-- `GET /api/analytics/url/{url_id}?api_key={key}` - Detailed URL analytics
+- `GET /api/analytics/summary?username={username}` - Overall stats
+- `GET /api/analytics/top-urls?username={username}&limit=10` - Top URLs by clicks
+- `GET /api/analytics/time-series?username={username}&days=7` - Time series data
+- `GET /api/analytics/url/{url_id}?username={username}` - Detailed URL analytics
 - `GET /health` - Health check (DB only)
 
-**Default API Key**: `test-api-key-12345`
+**Default Username**: `testuser`
 
 ## Caching Strategy
 
 ### Redis Cache Keys (API Service Only)
-- `url:{short_code}` - Cached URL lookups (1 minute TTL)
+- `url:{short_code}` - Cached URL lookups (2 minute TTL)
 - `rate_limit:{api_key}` - Rate limit counters with TTL
 - `clicks:{short_code}` - Click counters (no expiration)
 
 ### Cache Behavior
 - API service: Falls back to PostgreSQL on Redis miss for URL lookups
-- API service: Stores URL cache for 1 minute only
+- API service: Stores URL cache for 2 minutes (120 seconds)
 - Analytics service: No caching - direct PostgreSQL queries
 - Rate limiting: Degrades gracefully on Redis failure
 
@@ -458,16 +435,17 @@ kubectl delete namespace url-shortener
 - `DATABASE_URL` - PostgreSQL connection string
 - `REDIS_URL` - Redis connection string
 - `PORT` - Server port (default: 7543)
-- `RATE_LIMIT_REQUESTS` - Max requests per window (default: 100)
+- `RATE_LIMIT_REQUESTS` - Max requests per window (default: 5)
 - `RATE_LIMIT_WINDOW` - Rate limit window in seconds (default: 60)
+- `CACHE_TTL` - Cache TTL in seconds (default: 120)
 
 ### Analytics Service
 - `DATABASE_URL` - PostgreSQL connection string
 - `PORT` - Server port (default: 7544)
 
 ### Frontend
-- `VITE_API_URL` - API service URL (build-time variable)
-- `VITE_ANALYTICS_URL` - Analytics service URL (build-time variable)
+- No environment variables needed
+- Uses nginx reverse proxy with relative URLs for backend communication
 
 ## Failure Scenarios (RCA Testing)
 
@@ -477,7 +455,7 @@ This application is designed to test RCA tools with these failure modes:
 2. **Database Connection Issues**: Connection pool exhaustion, query timeouts
 3. **External API Timeouts**: Metadata fetching timeouts
 4. **Rate Limiting**: Trigger 429 responses by exceeding limits
-5. **Cache Inconsistency**: Stale data between Redis and PostgreSQL (1 minute TTL)
+5. **Cache Inconsistency**: Stale data between Redis and PostgreSQL (2 minute TTL)
 6. **Resource Exhaustion**: Connection pool depletion, memory leaks
 7. **Service Dependencies**: Cascading failures through the stack
 
@@ -531,6 +509,7 @@ This application is designed to test RCA tools with these failure modes:
 
 **Key Patterns**:
 - No state management library (useState, useEffect only)
-- Direct fetch() calls to backend APIs
-- API URLs baked in at build time via VITE_ env vars
+- Direct fetch() calls using relative URLs (e.g., '/api/urls')
+- Nginx reverse proxy handles backend routing
+- nginx.conf proxies /api/ to api-service:80 and /api/analytics/ to analytics-service:80
 - Nginx serves production build on port 80
