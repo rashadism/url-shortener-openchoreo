@@ -1,0 +1,491 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# All configuration variables are defined in vars.yaml
+# Edit vars.yaml to customize your deployment
+
+resources:
+  - vars.yaml
+  - base/url-shortener-demo-project.yaml
+  - base/postgres-component.yaml
+  - base/redis-component.yaml
+  - base/api-service-component.yaml
+  - base/analytics-service-component.yaml
+  - base/frontend-component.yaml
+
+# Image transformers - controlled by vars.yaml IMAGE_REGISTRY and IMAGE_TAG
+images:
+  - name: rashadxyz/url-shortener-api
+    newName: rashadxyz/url-shortener-api
+    newTag: demo
+  - name: rashadxyz/url-shortener-analytics
+    newName: rashadxyz/url-shortener-analytics
+    newTag: demo
+  - name: rashadxyz/url-shortener-frontend
+    newName: rashadxyz/url-shortener-frontend
+    newTag: demo
+  - name: postgres
+    newName: postgres
+    newTag: 15-alpine
+  - name: redis
+    newName: redis
+    newTag: 7-alpine
+
+# Replacements - substitute values from vars.yaml into manifests
+replacements:
+  # Namespace replacements
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.NAMESPACE
+    targets:
+      - select:
+          kind: Component
+        fieldPaths:
+          - metadata.namespace
+      - select:
+          kind: Workload
+        fieldPaths:
+          - metadata.namespace
+      - select:
+          kind: ComponentDeployment
+        fieldPaths:
+          - metadata.namespace
+
+  # Project name replacements
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.PROJECT_NAME
+    targets:
+      - select:
+          kind: Component
+        fieldPaths:
+          - spec.owner.projectName
+      - select:
+          kind: Workload
+        fieldPaths:
+          - spec.owner.projectName
+      - select:
+          kind: ComponentDeployment
+        fieldPaths:
+          - spec.owner.projectName
+
+  # Environment replacements
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.ENVIRONMENT
+    targets:
+      - select:
+          kind: ComponentDeployment
+        fieldPaths:
+          - spec.environment
+
+  # API Service replacements
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.API_SERVICE_PORT
+    targets:
+      - select:
+          kind: Component
+          name: api-service
+        fieldPaths:
+          - spec.parameters.port
+      - select:
+          kind: Workload
+          name: api-service
+        fieldPaths:
+          - spec.containers.main.env.[key=PORT].value
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.API_SERVICE_REPLICAS
+    targets:
+      - select:
+          kind: Component
+          name: api-service
+        fieldPaths:
+          - spec.parameters.replicas
+
+  # Analytics Service replacements
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.ANALYTICS_SERVICE_PORT
+    targets:
+      - select:
+          kind: Component
+          name: analytics-service
+        fieldPaths:
+          - spec.parameters.port
+      - select:
+          kind: Workload
+          name: analytics-service
+        fieldPaths:
+          - spec.containers.main.env.[key=PORT].value
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.ANALYTICS_SERVICE_REPLICAS
+    targets:
+      - select:
+          kind: Component
+          name: analytics-service
+        fieldPaths:
+          - spec.parameters.replicas
+
+  # Frontend replacements
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.FRONTEND_PORT
+    targets:
+      - select:
+          kind: Component
+          name: frontend
+        fieldPaths:
+          - spec.parameters.port
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.FRONTEND_REPLICAS
+    targets:
+      - select:
+          kind: Component
+          name: frontend
+        fieldPaths:
+          - spec.parameters.replicas
+
+  # PostgreSQL replacements
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.DB_PORT
+    targets:
+      - select:
+          kind: Component
+          name: postgres
+        fieldPaths:
+          - spec.parameters.port
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.DB_USER
+    targets:
+      - select:
+          kind: Workload
+          name: postgres
+        fieldPaths:
+          - spec.containers.main.env.[key=POSTGRES_USER].value
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.DB_PASSWORD
+    targets:
+      - select:
+          kind: Workload
+          name: postgres
+        fieldPaths:
+          - spec.containers.main.env.[key=POSTGRES_PASSWORD].value
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.DB_NAME
+    targets:
+      - select:
+          kind: Workload
+          name: postgres
+        fieldPaths:
+          - spec.containers.main.env.[key=POSTGRES_DB].value
+
+  # Redis replacements
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.REDIS_PORT
+    targets:
+      - select:
+          kind: Component
+          name: redis
+        fieldPaths:
+          - spec.parameters.port
+
+  # Rate limiting replacements
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.RATE_LIMIT_REQUESTS
+    targets:
+      - select:
+          kind: Workload
+          name: api-service
+        fieldPaths:
+          - spec.containers.main.env.[key=RATE_LIMIT_REQUESTS].value
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.RATE_LIMIT_WINDOW
+    targets:
+      - select:
+          kind: Workload
+          name: api-service
+        fieldPaths:
+          - spec.containers.main.env.[key=RATE_LIMIT_WINDOW].value
+
+  # Resource limits - API Service
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.API_CPU_REQUEST
+    targets:
+      - select:
+          kind: Component
+          name: api-service
+        fieldPaths:
+          - spec.parameters.resources.requests.cpu
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.API_MEMORY_REQUEST
+    targets:
+      - select:
+          kind: Component
+          name: api-service
+        fieldPaths:
+          - spec.parameters.resources.requests.memory
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.API_CPU_LIMIT
+    targets:
+      - select:
+          kind: Component
+          name: api-service
+        fieldPaths:
+          - spec.parameters.resources.limits.cpu
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.API_MEMORY_LIMIT
+    targets:
+      - select:
+          kind: Component
+          name: api-service
+        fieldPaths:
+          - spec.parameters.resources.limits.memory
+
+  # Resource limits - Analytics Service
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.ANALYTICS_CPU_REQUEST
+    targets:
+      - select:
+          kind: Component
+          name: analytics-service
+        fieldPaths:
+          - spec.parameters.resources.requests.cpu
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.ANALYTICS_MEMORY_REQUEST
+    targets:
+      - select:
+          kind: Component
+          name: analytics-service
+        fieldPaths:
+          - spec.parameters.resources.requests.memory
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.ANALYTICS_CPU_LIMIT
+    targets:
+      - select:
+          kind: Component
+          name: analytics-service
+        fieldPaths:
+          - spec.parameters.resources.limits.cpu
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.ANALYTICS_MEMORY_LIMIT
+    targets:
+      - select:
+          kind: Component
+          name: analytics-service
+        fieldPaths:
+          - spec.parameters.resources.limits.memory
+
+  # Resource limits - Frontend
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.FRONTEND_CPU_REQUEST
+    targets:
+      - select:
+          kind: Component
+          name: frontend
+        fieldPaths:
+          - spec.parameters.resources.requests.cpu
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.FRONTEND_MEMORY_REQUEST
+    targets:
+      - select:
+          kind: Component
+          name: frontend
+        fieldPaths:
+          - spec.parameters.resources.requests.memory
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.FRONTEND_CPU_LIMIT
+    targets:
+      - select:
+          kind: Component
+          name: frontend
+        fieldPaths:
+          - spec.parameters.resources.limits.cpu
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.FRONTEND_MEMORY_LIMIT
+    targets:
+      - select:
+          kind: Component
+          name: frontend
+        fieldPaths:
+          - spec.parameters.resources.limits.memory
+
+  # Resource limits - PostgreSQL
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.POSTGRES_CPU_REQUEST
+    targets:
+      - select:
+          kind: Component
+          name: postgres
+        fieldPaths:
+          - spec.parameters.resources.requests.cpu
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.POSTGRES_MEMORY_REQUEST
+    targets:
+      - select:
+          kind: Component
+          name: postgres
+        fieldPaths:
+          - spec.parameters.resources.requests.memory
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.POSTGRES_CPU_LIMIT
+    targets:
+      - select:
+          kind: Component
+          name: postgres
+        fieldPaths:
+          - spec.parameters.resources.limits.cpu
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.POSTGRES_MEMORY_LIMIT
+    targets:
+      - select:
+          kind: Component
+          name: postgres
+        fieldPaths:
+          - spec.parameters.resources.limits.memory
+
+  # Resource limits - Redis
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.REDIS_CPU_REQUEST
+    targets:
+      - select:
+          kind: Component
+          name: redis
+        fieldPaths:
+          - spec.parameters.resources.requests.cpu
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.REDIS_MEMORY_REQUEST
+    targets:
+      - select:
+          kind: Component
+          name: redis
+        fieldPaths:
+          - spec.parameters.resources.requests.memory
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.REDIS_CPU_LIMIT
+    targets:
+      - select:
+          kind: Component
+          name: redis
+        fieldPaths:
+          - spec.parameters.resources.limits.cpu
+
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.REDIS_MEMORY_LIMIT
+    targets:
+      - select:
+          kind: Component
+          name: redis
+        fieldPaths:
+          - spec.parameters.resources.limits.memory
+
+# Patches for database URLs (complex string interpolation)
+patches:
+  - target:
+      kind: Workload
+      name: api-service
+    patch: |-
+      - op: replace
+        path: /spec/containers/main/env/1/value
+        value: "postgres://urlshortener:password123@postgres:80/urlshortener?sslmode=disable"
+      - op: replace
+        path: /spec/containers/main/env/2/value
+        value: "redis:80"
+
+  - target:
+      kind: Workload
+      name: analytics-service
+    patch: |-
+      - op: replace
+        path: /spec/containers/main/env/1/value
+        value: "postgresql://urlshortener:password123@postgres:80/urlshortener"
+      - op: replace
+        path: /spec/containers/main/env/2/value
+        value: "redis://redis:80"

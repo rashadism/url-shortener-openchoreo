@@ -1,0 +1,73 @@
+# Configuration Variables
+# Edit these values to customize your deployment
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deployment-vars
+  namespace: default
+data:
+  # Project Configuration
+  PROJECT_NAME: "url-shortener"
+  NAMESPACE: "default"
+  ENVIRONMENT: "development"
+
+  # Image Registry & Tags
+  IMAGE_REGISTRY: "rashadxyz"
+  IMAGE_TAG: "demo"
+  POSTGRES_IMAGE: "postgres:15-alpine"
+  REDIS_IMAGE: "redis:7-alpine"
+
+  # Database Configuration
+  DB_USER: "urlshortener"
+  DB_PASSWORD: "password123"
+  DB_NAME: "urlshortener"
+  DB_PORT: "5432"
+
+  # Redis Configuration
+  REDIS_PORT: "6379"
+
+  # API Service Configuration
+  API_SERVICE_PORT: "7543"
+  API_SERVICE_REPLICAS: "1"
+
+  # Analytics Service Configuration
+  ANALYTICS_SERVICE_PORT: "7544"
+  ANALYTICS_SERVICE_REPLICAS: "1"
+
+  # Frontend Configuration
+  FRONTEND_PORT: "80"
+  FRONTEND_REPLICAS: "1"
+
+  # Rate Limiting
+  RATE_LIMIT_REQUESTS: "100"
+  RATE_LIMIT_WINDOW: "60"
+
+  # Resource Requests & Limits
+  API_CPU_REQUEST: "50m"
+  API_MEMORY_REQUEST: "128Mi"
+  API_CPU_LIMIT: "200m"
+  API_MEMORY_LIMIT: "256Mi"
+
+  ANALYTICS_CPU_REQUEST: "50m"
+  ANALYTICS_MEMORY_REQUEST: "128Mi"
+  ANALYTICS_CPU_LIMIT: "200m"
+  ANALYTICS_MEMORY_LIMIT: "256Mi"
+
+  FRONTEND_CPU_REQUEST: "50m"
+  FRONTEND_MEMORY_REQUEST: "128Mi"
+  FRONTEND_CPU_LIMIT: "200m"
+  FRONTEND_MEMORY_LIMIT: "256Mi"
+
+  POSTGRES_CPU_REQUEST: "100m"
+  POSTGRES_MEMORY_REQUEST: "256Mi"
+  POSTGRES_CPU_LIMIT: "500m"
+  POSTGRES_MEMORY_LIMIT: "512Mi"
+
+  REDIS_CPU_REQUEST: "50m"
+  REDIS_MEMORY_REQUEST: "64Mi"
+  REDIS_CPU_LIMIT: "200m"
+  REDIS_MEMORY_LIMIT: "128Mi"
+
+  # OpenChoreo Service Port (services expose on this port)
+  SERVICE_EXPOSE_PORT: "80"

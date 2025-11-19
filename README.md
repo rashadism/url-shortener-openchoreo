@@ -328,12 +328,16 @@ sample-app/
 │   ├── frontend-*.yaml
 │   └── README.md
 ├── manifests/
-│   ├── url-shortener-project.yaml
-│   ├── api-service-component.yaml
-│   ├── analytics-service-component.yaml
-│   ├── frontend-component.yaml
-│   ├── postgres-component.yaml
-│   └── redis-component.yaml
+│   ├── kustomization.yaml    # Kustomize configuration
+│   ├── vars.yaml             # All configurable variables
+│   ├── README.md             # Kustomize documentation
+│   └── base/                 # Base manifests
+│       ├── url-shortener-demo-project.yaml
+│       ├── api-service-component.yaml
+│       ├── analytics-service-component.yaml
+│       ├── frontend-component.yaml
+│       ├── postgres-component.yaml
+│       └── redis-component.yaml
 ├── build-and-push.sh
 └── README.md
 ```
@@ -365,26 +369,54 @@ VERSION=v1.0.0 ./build-and-push.sh
 
 ## Deployment Options
 
-### OpenChoreo Deployment
+### OpenChoreo Deployment (with Kustomize)
 
-OpenChoreo manifests are available in the `manifests/` directory. They define:
-- Project: `url-shortener`
-- Components: api-service, analytics-service, frontend, postgres, redis
-- Each component includes Workload and ComponentDeployment resources
+OpenChoreo manifests are available in the `manifests/` directory with **Kustomize support** for easy configuration management.
 
-To deploy with OpenChoreo:
+The manifests use Kustomize to eliminate hardcoded values. All configuration is centralized in `manifests/vars.yaml`:
+- Image tags and registries
+- Database credentials
+- Port numbers
+- Resource limits (CPU, memory)
+- Replica counts
+- Environment variables
+
+**Quick Deploy** (recommended):
 ```bash
-# Apply all manifests
-kubectl apply -f manifests/
+# Deploy with Kustomize (uses manifests/vars.yaml for configuration)
+kubectl apply -k manifests/
 
-# Or apply individually
-kubectl apply -f manifests/url-shortener-project.yaml
-kubectl apply -f manifests/postgres-component.yaml
-kubectl apply -f manifests/redis-component.yaml
-kubectl apply -f manifests/api-service-component.yaml
-kubectl apply -f manifests/analytics-service-component.yaml
-kubectl apply -f manifests/frontend-component.yaml
+# Preview what will be deployed
+kubectl kustomize manifests/
 ```
+
+**Customize Deployment**:
+Edit `manifests/vars.yaml` to change any configuration:
+```yaml
+# Example: Change image tag and database password
+data:
+  IMAGE_TAG: "v2.0.0"
+  DB_PASSWORD: "your-secure-password"
+  API_SERVICE_REPLICAS: "3"
+```
+
+Then apply:
+```bash
+kubectl apply -k manifests/
+```
+
+**Without Kustomize** (direct deployment):
+```bash
+# Apply base manifests directly
+kubectl apply -f manifests/base/url-shortener-demo-project.yaml
+kubectl apply -f manifests/base/postgres-component.yaml
+kubectl apply -f manifests/base/redis-component.yaml
+kubectl apply -f manifests/base/api-service-component.yaml
+kubectl apply -f manifests/base/analytics-service-component.yaml
+kubectl apply -f manifests/base/frontend-component.yaml
+```
+
+See `manifests/README.md` for detailed Kustomize documentation and all configurable variables.
 
 ### Kubernetes Deployment
 

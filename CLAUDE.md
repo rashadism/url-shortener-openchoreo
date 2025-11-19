@@ -315,16 +315,16 @@ cd ..
 
 **Deploy OpenChoreo Manifests**:
 ```bash
-# Deploy all OpenChoreo manifests
-kubectl apply -f manifests/
+# Recommended: Deploy using Kustomize (see Kustomize Deployment section below)
+kubectl apply -k manifests/
 
-# Or deploy individually
-kubectl apply -f manifests/url-shortener-demo-project.yaml
-kubectl apply -f manifests/postgres-component.yaml
-kubectl apply -f manifests/redis-component.yaml
-kubectl apply -f manifests/api-service-component.yaml
-kubectl apply -f manifests/analytics-service-component.yaml
-kubectl apply -f manifests/frontend-component.yaml
+# Or deploy base manifests directly (without Kustomize)
+kubectl apply -f manifests/base/url-shortener-demo-project.yaml
+kubectl apply -f manifests/base/postgres-component.yaml
+kubectl apply -f manifests/base/redis-component.yaml
+kubectl apply -f manifests/base/api-service-component.yaml
+kubectl apply -f manifests/base/analytics-service-component.yaml
+kubectl apply -f manifests/base/frontend-component.yaml
 ```
 
 **Port Mapping in OpenChoreo**:
@@ -335,6 +335,53 @@ kubectl apply -f manifests/frontend-component.yaml
 | api-service | 80 | 7543 |
 | analytics-service | 80 | 7544 |
 | frontend | 80 | 80 |
+
+### Kustomize Deployment (Recommended)
+
+The manifests directory uses Kustomize to manage all configuration from a single place. This eliminates hardcoded values and makes it easy to customize deployments.
+
+**Quick Start**:
+```bash
+# Deploy with default configuration
+kubectl apply -k manifests/
+
+# Preview generated manifests first
+kubectl kustomize manifests/
+
+# Or build to a file
+kubectl kustomize manifests/ > deployment.yaml
+kubectl apply -f deployment.yaml
+```
+
+**Customize Configuration**:
+All variables are defined in `manifests/vars.yaml`. Edit this file to change:
+- Image tags: `IMAGE_TAG: "v1.0.0"`
+- Database credentials: `DB_PASSWORD: "your-password"`
+- Resource limits: `API_MEMORY_LIMIT: "512Mi"`
+- Replica counts: `API_SERVICE_REPLICAS: "3"`
+- Ports, environment variables, and more
+
+**Example - Update Image Tag**:
+```bash
+# Edit manifests/vars.yaml
+# Change: IMAGE_TAG: "demo"
+# To:     IMAGE_TAG: "v2.0.0"
+
+# Apply changes
+kubectl apply -k manifests/
+```
+
+**Example - Change Namespace**:
+```bash
+# Edit manifests/vars.yaml
+# Change: NAMESPACE: "default"
+# To:     NAMESPACE: "production"
+
+# Apply to new namespace
+kubectl apply -k manifests/
+```
+
+See `manifests/README.md` for detailed documentation on all configurable variables and advanced usage.
 
 ### View Logs
 ```bash
