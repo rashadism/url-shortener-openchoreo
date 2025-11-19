@@ -218,6 +218,18 @@ replacements:
         fieldPaths:
           - spec.parameters.port
 
+  # Cache TTL replacement
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.CACHE_TTL
+    targets:
+      - select:
+          kind: Workload
+          name: api-service
+        fieldPaths:
+          - spec.containers.main.env.[key=CACHE_TTL].value
+
   # Rate limiting replacements
   - source:
       kind: ConfigMap

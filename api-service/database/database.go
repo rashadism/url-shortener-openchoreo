@@ -84,9 +84,21 @@ func Close() {
 	}
 }
 
-func ValidateAPIKey(apiKey string) (int, error) {
+func GetOrCreateUser(username string) (int, error) {
 	var userID int
-	err := DB.QueryRow("SELECT id FROM users WHERE api_key = $1", apiKey).Scan(&userID)
+
+	// Try to get existing user
+	err := DB.QueryRow("SELECT id FROM users WHERE username = $1", username).Scan(&userID)
+	if err == nil {
+		return userID, nil
+	}
+
+	// User doesn't exist, create new user
+	err = DB.QueryRow(
+		"INSERT INTO users (username, api_key) VALUES ($1, $2) RETURNING id",
+		username, "", // Empty api_key since we're not using it
+	).Scan(&userID)
+
 	return userID, err
 }
 

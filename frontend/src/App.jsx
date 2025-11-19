@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 
 // Use relative URLs - nginx will proxy to backend services
-// Empty strings because endpoints already include /api and /analytics paths
 const API_URL = ''
 const ANALYTICS_URL = ''
-const API_KEY = import.meta.env.VITE_API_KEY || 'test-api-key-12345'
 
 function App() {
+  const [username, setUsername] = useState(localStorage.getItem('username') || '')
+  const [showUsernameModal, setShowUsernameModal] = useState(!localStorage.getItem('username'))
   const [activeTab, setActiveTab] = useState('create')
   const [longUrl, setLongUrl] = useState('')
   const [customCode, setCustomCode] = useState('')
@@ -17,13 +17,30 @@ function App() {
   const [topUrls, setTopUrls] = useState([])
 
   useEffect(() => {
-    loadUrls()
-    loadAnalytics()
-  }, [])
+    if (username) {
+      loadUrls()
+      loadAnalytics()
+    }
+  }, [username])
+
+  const handleUsernameSubmit = (e) => {
+    e.preventDefault()
+    if (username.trim()) {
+      localStorage.setItem('username', username.trim())
+      setShowUsernameModal(false)
+      loadUrls()
+      loadAnalytics()
+    }
+  }
+
+  const handleChangeUsername = () => {
+    setShowUsernameModal(true)
+  }
 
   const loadUrls = async () => {
+    if (!username) return
     try {
-      const response = await fetch(`${API_URL}/api/urls?api_key=${API_KEY}`)
+      const response = await fetch(`${API_URL}/api/urls?username=${encodeURIComponent(username)}`)
       if (response.ok) {
         const data = await response.json()
         setUrls(data || [])
@@ -34,10 +51,11 @@ function App() {
   }
 
   const loadAnalytics = async () => {
+    if (!username) return
     try {
       const [summaryRes, topUrlsRes] = await Promise.all([
-        fetch(`${ANALYTICS_URL}/api/analytics/summary?api_key=${API_KEY}`),
-        fetch(`${ANALYTICS_URL}/api/analytics/top-urls?api_key=${API_KEY}&limit=10`)
+        fetch(`${ANALYTICS_URL}/api/analytics/summary?username=${encodeURIComponent(username)}`),
+        fetch(`${ANALYTICS_URL}/api/analytics/top-urls?username=${encodeURIComponent(username)}&limit=10`)
       ])
 
       if (summaryRes.ok) {
@@ -68,7 +86,7 @@ function App() {
         body: JSON.stringify({
           long_url: longUrl,
           custom_code: customCode || undefined,
-          api_key: API_KEY,
+          username: username,
         }),
       })
 
@@ -94,9 +112,36 @@ function App() {
 
   return (
     <div className="app">
+      {showUsernameModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2>Welcome!</h2>
+            <p>Enter your username to get started</p>
+            <form onSubmit={handleUsernameSubmit}>
+              <input
+                type="text"
+                placeholder="Enter username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoFocus
+                required
+              />
+              <button type="submit" className="primary-btn">
+                Continue
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       <header className="header">
         <h1>⚡ URL Shortener</h1>
         <p className="subtitle">Fast, simple, and powerful link shortening</p>
+        {username && !showUsernameModal && (
+          <button onClick={handleChangeUsername} className="username-btn">
+            👤 {username}
+          </button>
+        )}
       </header>
 
       <div className="container">

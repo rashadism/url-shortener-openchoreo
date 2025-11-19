@@ -28,6 +28,9 @@ func main() {
 	}
 	defer cache.Close()
 
+	// Initialize handlers with cache TTL
+	handlers.Init(cfg.CacheTTL)
+
 	// Setup Gin router
 	r := gin.Default()
 

@@ -9,6 +9,7 @@ type Config struct {
 	DatabaseURL       string
 	RedisURL          string
 	Port              string
+	CacheTTL          int // Cache TTL in seconds
 	RateLimitRequests int
 	RateLimitWindow   int
 }
@@ -18,6 +19,7 @@ func Load() *Config {
 		DatabaseURL:       getEnv("DATABASE_URL", "postgres://urlshortener:password123@localhost:5432/urlshortener?sslmode=disable"),
 		RedisURL:          getEnv("REDIS_URL", "localhost:6379"),
 		Port:              getEnv("PORT", "7543"),
+		CacheTTL:          getEnvInt("CACHE_TTL", 120), // Default 2 minutes
 		RateLimitRequests: getEnvInt("RATE_LIMIT_REQUESTS", 5),
 		RateLimitWindow:   getEnvInt("RATE_LIMIT_WINDOW", 60),
 	}

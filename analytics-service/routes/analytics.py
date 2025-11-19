@@ -2,7 +2,7 @@ import logging
 from typing import List, Dict, Any
 from fastapi import APIRouter, HTTPException, Query
 from models import AnalyticsSummary, URLStats, TimeSeriesData
-from auth import validate_api_key
+from auth import get_or_create_user
 from services import (
     get_analytics_summary_data,
     get_top_urls_data,
@@ -15,11 +15,11 @@ router = APIRouter()
 
 
 @router.get("/api/analytics/summary", response_model=AnalyticsSummary)
-def get_analytics_summary(api_key: str = Query(...)):
+def get_analytics_summary(username: str = Query(...)):
     """Get overall analytics summary"""
-    user_id = validate_api_key(api_key)
+    user_id = get_or_create_user(username)
     if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid API key")
+        raise HTTPException(status_code=500, detail="Failed to get user")
 
     try:
         summary = get_analytics_summary_data(user_id)
@@ -30,11 +30,11 @@ def get_analytics_summary(api_key: str = Query(...)):
 
 
 @router.get("/api/analytics/top-urls", response_model=List[URLStats])
-def get_top_urls(api_key: str = Query(...), limit: int = Query(10, ge=1, le=100)):
+def get_top_urls(username: str = Query(...), limit: int = Query(10, ge=1, le=100)):
     """Get top performing URLs by click count"""
-    user_id = validate_api_key(api_key)
+    user_id = get_or_create_user(username)
     if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid API key")
+        raise HTTPException(status_code=500, detail="Failed to get user")
 
     try:
         url_stats = get_top_urls_data(user_id, limit)
@@ -46,13 +46,13 @@ def get_top_urls(api_key: str = Query(...), limit: int = Query(10, ge=1, le=100)
 
 @router.get("/api/analytics/time-series", response_model=List[TimeSeriesData])
 def get_time_series(
-    api_key: str = Query(...),
+    username: str = Query(...),
     days: int = Query(7, ge=1, le=90)
 ):
     """Get clicks over time (time series data)"""
-    user_id = validate_api_key(api_key)
+    user_id = get_or_create_user(username)
     if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid API key")
+        raise HTTPException(status_code=500, detail="Failed to get user")
 
     try:
         time_series = get_time_series_data(user_id, days)
@@ -63,11 +63,11 @@ def get_time_series(
 
 
 @router.get("/api/analytics/url/{url_id}", response_model=Dict[str, Any])
-def get_url_analytics(url_id: int, api_key: str = Query(...)):
+def get_url_analytics(url_id: int, username: str = Query(...)):
     """Get detailed analytics for a specific URL"""
-    user_id = validate_api_key(api_key)
+    user_id = get_or_create_user(username)
     if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid API key")
+        raise HTTPException(status_code=500, detail="Failed to get user")
 
     try:
         url_data = get_url_analytics_data(url_id, user_id)

@@ -44,6 +44,11 @@ func SetURL(shortCode, longURL string, ttl time.Duration) error {
 	return Client.Set(ctx, cacheKey, longURL, ttl).Err()
 }
 
+func DeleteURL(shortCode string) error {
+	cacheKey := fmt.Sprintf("url:%s", shortCode)
+	return Client.Del(ctx, cacheKey).Err()
+}
+
 func IncrementClickCounter(shortCode string) error {
 	counterKey := fmt.Sprintf("clicks:%s", shortCode)
 	return Client.Incr(ctx, counterKey).Err()

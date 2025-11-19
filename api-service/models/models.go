@@ -5,7 +5,7 @@ import "time"
 type CreateURLRequest struct {
 	LongURL    string `json:"long_url" binding:"required"`
 	CustomCode string `json:"custom_code"`
-	APIKey     string `json:"api_key" binding:"required"`
+	Username   string `json:"username" binding:"required"`
 }
 
 type URLResponse struct {

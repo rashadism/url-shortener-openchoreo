@@ -39,6 +39,9 @@ data:
   FRONTEND_PORT: "80"
   FRONTEND_REPLICAS: "1"
 
+  # Cache Configuration
+  CACHE_TTL: "120"  # Cache TTL in seconds (2 minutes)
+
   # Rate Limiting
   RATE_LIMIT_REQUESTS: "100"
   RATE_LIMIT_WINDOW: "60"

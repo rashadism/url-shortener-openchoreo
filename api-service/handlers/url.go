@@ -17,6 +17,13 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
+var cacheTTL time.Duration
+
+// Init initializes the handlers package with configuration
+func Init(ttlSeconds int) {
+	cacheTTL = time.Duration(ttlSeconds) * time.Second
+}
+
 func CreateURL(c *gin.Context) {
 	var req models.CreateURLRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -24,11 +31,11 @@ func CreateURL(c *gin.Context) {
 		return
 	}
 
-	// Validate API key
-	userID, err := database.ValidateAPIKey(req.APIKey)
+	// Get or create user by username
+	userID, err := database.GetOrCreateUser(req.Username)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid API key"})
-		return
+		log.Printf("Database unavailable for user creation: %v", err)
+		userID = 0 // Continue without user ID
 	}
 
 	// Generate short code
@@ -37,23 +44,38 @@ func CreateURL(c *gin.Context) {
 		shortCode = services.GenerateShortCode()
 	}
 
-	// Insert URL into database
-	urlID, err := database.InsertURL(shortCode, req.LongURL, userID)
-	if err != nil {
-		if strings.Contains(err.Error(), "duplicate") {
-			c.JSON(http.StatusConflict, gin.H{"error": "Short code already exists"})
-			return
-		}
-		log.Printf("Database error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create URL"})
+	// Check if short code already exists in cache
+	existingURL, err := cache.GetURL(shortCode)
+	if err == nil && existingURL != "" {
+		c.JSON(http.StatusConflict, gin.H{"error": "Short code already exists"})
 		return
 	}
 
-	// Cache in Redis for 1 minute
-	cache.SetURL(shortCode, req.LongURL, 1*time.Minute)
+	// Cache the URL (required for redirects to work)
+	err = cache.SetURL(shortCode, req.LongURL, cacheTTL)
+	if err != nil {
+		log.Printf("Failed to cache URL: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create short URL"})
+		return
+	}
 
-	// Fetch metadata asynchronously
-	go services.FetchAndUpdateMetadata(urlID, req.LongURL)
+	// Try to insert into database (best effort)
+	urlID := 0
+	urlID, err = database.InsertURL(shortCode, req.LongURL, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate") {
+			cache.DeleteURL(shortCode)
+			c.JSON(http.StatusConflict, gin.H{"error": "Short code already exists"})
+			return
+		}
+		log.Printf("Database unavailable, URL cached for %v: %v", cacheTTL, err)
+		// Continue - URL is cached and will work for redirects
+	}
+
+	// Fetch metadata asynchronously (only if DB insert succeeded)
+	if urlID > 0 {
+		go services.FetchAndUpdateMetadata(urlID, req.LongURL)
+	}
 
 	response := models.URLResponse{
 		ID:        urlID,
@@ -67,14 +89,17 @@ func CreateURL(c *gin.Context) {
 }
 
 func ListURLs(c *gin.Context) {
-	apiKey := c.GetHeader("X-API-Key")
-	if apiKey == "" {
-		apiKey = c.Query("api_key")
+	username := c.Query("username")
+	if username == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "username parameter is required"})
+		return
 	}
 
-	userID, err := database.ValidateAPIKey(apiKey)
+	userID, err := database.GetOrCreateUser(username)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid API key"})
+		log.Printf("Database unavailable for listing URLs: %v", err)
+		// Return empty list when DB is down
+		c.JSON(http.StatusOK, []models.URLResponse{})
 		return
 	}
 
@@ -83,8 +108,9 @@ func ListURLs(c *gin.Context) {
 		userID,
 	)
 	if err != nil {
-		log.Printf("Database error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch URLs"})
+		log.Printf("Database unavailable for query: %v", err)
+		// Return empty list when DB is down
+		c.JSON(http.StatusOK, []models.URLResponse{})
 		return
 	}
 	defer rows.Close()
@@ -131,8 +157,8 @@ func Redirect(c *gin.Context) {
 			return
 		}
 
-		// Update cache for 1 minute
-		cache.SetURL(shortCode, longURL, 1*time.Minute)
+		// Update cache
+		cache.SetURL(shortCode, longURL, cacheTTL)
 	} else if err != nil {
 		log.Printf("Redis error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cache error"})

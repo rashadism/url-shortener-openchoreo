@@ -41,6 +41,8 @@ spec:
           value: "postgres://urlshortener:password123@postgres:80/urlshortener?sslmode=disable"
         - key: REDIS_URL
           value: "redis:80"
+        - key: CACHE_TTL
+          value: "120"
         - key: RATE_LIMIT_REQUESTS
           value: "100"
         - key: RATE_LIMIT_WINDOW
