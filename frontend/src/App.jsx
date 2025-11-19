@@ -75,7 +75,9 @@ function App() {
       const data = await response.json()
 
       if (response.ok) {
-        setMessage({ type: 'success', text: `Short URL created: ${data.short_url}` })
+        // Construct full URL from relative path for display
+        const fullUrl = `${window.location.origin}${data.short_url}`
+        setMessage({ type: 'success', text: `Short URL created: ${fullUrl}` })
         setLongUrl('')
         setCustomCode('')
         loadUrls()

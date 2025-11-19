@@ -8,6 +8,7 @@ spec:
     projectName: url-shortener
 
   componentType: deployment/web-application
+  autoDeploy: true
 
   parameters:
     replicas: 1

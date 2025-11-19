@@ -59,7 +59,7 @@ func CreateURL(c *gin.Context) {
 		ID:        urlID,
 		ShortCode: shortCode,
 		LongURL:   req.LongURL,
-		ShortURL:  fmt.Sprintf("http://localhost:7543/%s", shortCode),
+		ShortURL:  fmt.Sprintf("/%s", shortCode),
 		CreatedAt: time.Now(),
 	}
 
@@ -101,7 +101,7 @@ func ListURLs(c *gin.Context) {
 		if title.Valid {
 			url.Title = title.String
 		}
-		url.ShortURL = fmt.Sprintf("http://localhost:7543/%s", url.ShortCode)
+		url.ShortURL = fmt.Sprintf("/%s", url.ShortCode)
 		urls = append(urls, url)
 	}
 
