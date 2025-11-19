@@ -1,0 +1,56 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: frontend
+  namespace: default
+spec:
+  owner:
+    projectName: url-shortener
+
+  componentType: deployment/web-application
+
+  parameters:
+    replicas: 1
+    port: 80
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+
+---
+
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: frontend
+  namespace: default
+spec:
+  owner:
+    componentName: frontend
+    projectName: url-shortener
+  containers:
+    main:
+      image: rashadxyz/url-shortener-frontend:demo
+      # Note: Frontend env vars are baked into the build via Dockerfile ARGs
+      # For OpenChoreo deployment, build the image with:
+      # docker build --build-arg VITE_API_URL=http://api-service:80 \
+      #              --build-arg VITE_ANALYTICS_URL=http://analytics-service:80 \
+      #              -t rashadxyz/url-shortener-frontend:latest frontend/
+      # (Services expose on port 80, with configured port as targetPort)
+
+---
+
+apiVersion: openchoreo.dev/v1alpha1
+kind: ComponentDeployment
+metadata:
+  name: frontend-development
+  namespace: default
+spec:
+  owner:
+    projectName: url-shortener
+    componentName: frontend
+
+  environment: development

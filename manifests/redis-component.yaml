@@ -1,0 +1,52 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: redis
+  namespace: default
+spec:
+  owner:
+    projectName: url-shortener
+  componentType: deployment/service
+
+  parameters:
+    replicas: 1
+    port: 6379
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+      limits:
+        cpu: "200m"
+        memory: "128Mi"
+
+---
+
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: redis
+  namespace: default
+spec:
+  owner:
+    componentName: redis
+    projectName: url-shortener
+  containers:
+    main:
+      image: redis:7-alpine
+      env:
+        - key: REDIS_REPLICATION_MODE
+          value: "master"
+
+---
+
+apiVersion: openchoreo.dev/v1alpha1
+kind: ComponentDeployment
+metadata:
+  name: redis-development
+  namespace: default
+spec:
+  owner:
+    projectName: url-shortener
+    componentName: redis
+
+  environment: development

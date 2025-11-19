@@ -1,0 +1,56 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: cart
+  namespace: default
+spec:
+  owner:
+    projectName: gcp-microservice-demo
+
+  componentType: deployment/service
+
+  parameters:
+    replicas: 1
+    port: 7070
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+
+---
+
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: cart
+  namespace: default
+spec:
+  owner:
+    componentName: cart
+    projectName: gcp-microservice-demo
+  containers:
+    main:
+      image: us-central1-docker.pkg.dev/google-samples/microservices-demo/cartservice:v0.10.3
+      env:
+        - key: PORT
+          value: "7070"
+        - key: REDIS_ADDR
+          value: "redis:80"
+
+
+---
+
+apiVersion: openchoreo.dev/v1alpha1
+kind: ComponentDeployment
+metadata:
+  name: cart-development
+  namespace: default
+spec:
+  owner:
+    projectName: gcp-microservice-demo
+    componentName: cart
+
+  environment: development

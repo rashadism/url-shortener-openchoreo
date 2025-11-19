@@ -1,0 +1,46 @@
+import os
+import logging
+import psycopg2
+from contextlib import contextmanager
+
+logger = logging.getLogger(__name__)
+
+# Global database connection
+db_conn = None
+
+
+def init_database():
+    """Initialize database connection"""
+    global db_conn
+
+    db_url = os.getenv("DATABASE_URL", "postgresql://urlshortener:password123@localhost:5432/urlshortener")
+    try:
+        db_conn = psycopg2.connect(db_url)
+        logger.info("Database connected successfully")
+        return db_conn
+    except Exception as e:
+        logger.error(f"Failed to connect to database: {e}")
+        raise
+
+
+def close_database():
+    """Close database connection"""
+    global db_conn
+    if db_conn:
+        db_conn.close()
+        logger.info("Database connection closed")
+
+
+def get_db():
+    """Get database connection"""
+    return db_conn
+
+
+@contextmanager
+def get_cursor(cursor_factory=None):
+    """Context manager for database cursor"""
+    cursor = db_conn.cursor(cursor_factory=cursor_factory)
+    try:
+        yield cursor
+    finally:
+        cursor.close()

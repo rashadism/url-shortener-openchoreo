@@ -1,0 +1,60 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: api-service
+  namespace: default
+spec:
+  owner:
+    projectName: url-shortener
+  componentType: deployment/service
+
+  parameters:
+    replicas: 1
+    port: 7543
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+
+---
+
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: api-service
+  namespace: default
+spec:
+  owner:
+    componentName: api-service
+    projectName: url-shortener
+  containers:
+    main:
+      image: rashadxyz/url-shortener-api:demo
+      env:
+        - key: PORT
+          value: "7543"
+        - key: DATABASE_URL
+          value: "postgres://urlshortener:password123@postgres:80/urlshortener?sslmode=disable"
+        - key: REDIS_URL
+          value: "redis:80"
+        - key: RATE_LIMIT_REQUESTS
+          value: "100"
+        - key: RATE_LIMIT_WINDOW
+          value: "60"
+
+---
+
+apiVersion: openchoreo.dev/v1alpha1
+kind: ComponentDeployment
+metadata:
+  name: api-service-development
+  namespace: default
+spec:
+  owner:
+    projectName: url-shortener
+    componentName: api-service
+
+  environment: development

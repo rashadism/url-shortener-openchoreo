@@ -1,0 +1,58 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: postgres
+  namespace: default
+spec:
+  owner:
+    projectName: url-shortener
+  componentType: deployment/service
+
+  parameters:
+    replicas: 1
+    port: 5432
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+
+---
+
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: postgres
+  namespace: default
+spec:
+  owner:
+    componentName: postgres
+    projectName: url-shortener
+  containers:
+    main:
+      image: postgres:15-alpine
+      env:
+        - key: POSTGRES_USER
+          value: "urlshortener"
+        - key: POSTGRES_PASSWORD
+          value: "password123"
+        - key: POSTGRES_DB
+          value: "urlshortener"
+        - key: PGDATA
+          value: "/var/lib/postgresql/data/pgdata"
+
+---
+
+apiVersion: openchoreo.dev/v1alpha1
+kind: ComponentDeployment
+metadata:
+  name: postgres-development
+  namespace: default
+spec:
+  owner:
+    projectName: url-shortener
+    componentName: postgres
+
+  environment: development
