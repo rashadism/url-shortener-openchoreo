@@ -20,7 +20,8 @@ def init_database():
         return db_conn
     except Exception as e:
         logger.error(f"Failed to connect to database: {e}")
-        raise
+        db_conn = None
+        return None
 
 
 def close_database():
@@ -39,6 +40,8 @@ def get_db():
 @contextmanager
 def get_cursor(cursor_factory=None):
     """Context manager for database cursor"""
+    if db_conn is None:
+        raise Exception("Database connection not available")
     cursor = db_conn.cursor(cursor_factory=cursor_factory)
     try:
         yield cursor

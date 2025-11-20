@@ -13,23 +13,9 @@ resources:
   - base/analytics-service-component.yaml
   - base/frontend-component.yaml
 
-# Image transformers - controlled by vars.yaml IMAGE_REGISTRY and IMAGE_TAG
-images:
-  - name: rashadxyz/url-shortener-api
-    newName: rashadxyz/url-shortener-api
-    newTag: demo
-  - name: rashadxyz/url-shortener-analytics
-    newName: rashadxyz/url-shortener-analytics
-    newTag: demo
-  - name: rashadxyz/url-shortener-frontend
-    newName: rashadxyz/url-shortener-frontend
-    newTag: demo
-  - name: postgres
-    newName: postgres
-    newTag: 15-alpine
-  - name: redis
-    newName: redis
-    newTag: 7-alpine
+# NOTE: images transformer doesn't work for custom CRDs (openchoreo.dev/v1alpha1)
+# Image tags are controlled via JSON patches in the patches section below
+# To change image tags, edit the image patches at the bottom of this file
 
 # Replacements - substitute values from vars.yaml into manifests
 replacements:
@@ -478,8 +464,50 @@ replacements:
         fieldPaths:
           - spec.parameters.resources.limits.memory
 
-# Patches for database URLs (complex string interpolation)
+# Patches for database URLs and images
 patches:
+  # Image patches (images transformer doesn't work for custom CRDs)
+  - target:
+      kind: Workload
+      name: api-service
+    patch: |-
+      - op: replace
+        path: /spec/containers/main/image
+        value: "rashadxyz/url-shortener-api:latest-demo"
+
+  - target:
+      kind: Workload
+      name: analytics-service
+    patch: |-
+      - op: replace
+        path: /spec/containers/main/image
+        value: "rashadxyz/url-shortener-analytics:latest-demo"
+
+  - target:
+      kind: Workload
+      name: frontend
+    patch: |-
+      - op: replace
+        path: /spec/containers/main/image
+        value: "rashadxyz/url-shortener-frontend:latest-demo"
+
+  - target:
+      kind: Workload
+      name: postgres
+    patch: |-
+      - op: replace
+        path: /spec/containers/main/image
+        value: "rashadxyz/url-shortener-db:latest-demo"
+
+  - target:
+      kind: Workload
+      name: redis
+    patch: |-
+      - op: replace
+        path: /spec/containers/main/image
+        value: "redis:7-alpine"
+
+  # Database URL patches
   - target:
       kind: Workload
       name: api-service
@@ -498,6 +526,3 @@ patches:
       - op: replace
         path: /spec/containers/main/env/1/value
         value: "postgresql://urlshortener:password123@postgres:80/urlshortener"
-      - op: replace
-        path: /spec/containers/main/env/2/value
-        value: "redis://redis:80"

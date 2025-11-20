@@ -18,13 +18,13 @@ func main() {
 
 	// Initialize database
 	if err := database.Init(cfg.DatabaseURL); err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		log.Println("Failed to connect to database:", err)
 	}
 	defer database.Close()
 
 	// Initialize Redis
 	if err := cache.Init(cfg.RedisURL); err != nil {
-		log.Fatal("Failed to connect to Redis:", err)
+		log.Println("Failed to connect to Redis:", err)
 	}
 	defer cache.Close()
 

@@ -68,7 +68,16 @@ Frontend → Analytics Service → PostgreSQL (direct complex queries)
 
 **Database Setup**:
 ```bash
-# Start PostgreSQL
+# Option 1: Use custom image with built-in schema (recommended)
+docker run -d \
+  --name url-shortener-db \
+  -e POSTGRES_USER=urlshortener \
+  -e POSTGRES_PASSWORD=password123 \
+  -e POSTGRES_DB=urlshortener \
+  -p 5432:5432 \
+  rashadxyz/url-shortener-db:latest
+
+# Option 2: Start PostgreSQL and manually initialize
 docker run -d \
   --name url-shortener-db \
   -e POSTGRES_USER=urlshortener \
@@ -77,7 +86,7 @@ docker run -d \
   -p 5432:5432 \
   postgres:15-alpine
 
-# Initialize database with schema (SQL from README.md)
+# Initialize database with schema (only needed for Option 2)
 docker exec -i url-shortener-db psql -U urlshortener -d urlshortener << 'EOF'
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
@@ -128,6 +137,29 @@ docker run -d \
   -p 6379:6379 \
   redis:7-alpine
 ```
+
+### Database Service (PostgreSQL)
+
+The database service uses a custom Docker image that extends `postgres:15-alpine` with the application schema and seed data.
+
+**Build Docker Image**:
+```bash
+cd db-service
+docker build -t rashadxyz/url-shortener-db .
+```
+
+**Run Container**:
+```bash
+docker run -d \
+  --name url-shortener-db \
+  -p 5432:5432 \
+  -e POSTGRES_USER=urlshortener \
+  -e POSTGRES_PASSWORD=password123 \
+  -e POSTGRES_DB=urlshortener \
+  rashadxyz/url-shortener-db
+```
+
+**Note**: The database schema and seed data (including the test user) are automatically initialized on first startup via the `init.sql` script in the image.
 
 ### API Service (Go)
 
@@ -229,6 +261,7 @@ docker run -d \
 ## Docker Hub Images
 
 Images are published to Docker Hub at:
+- `rashadxyz/url-shortener-db:latest`
 - `rashadxyz/url-shortener-api:latest`
 - `rashadxyz/url-shortener-analytics:latest`
 - `rashadxyz/url-shortener-frontend:latest`
@@ -252,6 +285,7 @@ VERSION=v1.0.0 ./build-and-push.sh
 
 ### Pull Images from Docker Hub
 ```bash
+docker pull rashadxyz/url-shortener-db:latest
 docker pull rashadxyz/url-shortener-api:latest
 docker pull rashadxyz/url-shortener-analytics:latest
 docker pull rashadxyz/url-shortener-frontend:latest
@@ -263,6 +297,7 @@ docker pull rashadxyz/url-shortener-frontend:latest
 eval $(minikube docker-env)
 
 # Pull or build images in minikube's Docker daemon
+docker pull rashadxyz/url-shortener-db:latest
 docker pull rashadxyz/url-shortener-api:latest
 docker pull rashadxyz/url-shortener-analytics:latest
 docker pull rashadxyz/url-shortener-frontend:latest

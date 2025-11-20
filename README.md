@@ -4,6 +4,32 @@ A distributed URL shortener application built for testing Root Cause Analysis (R
 
 ## Architecture
 
+```mermaid
+graph TB
+    User[User/Browser]
+    Frontend[Frontend]
+    API[API Service]
+    Analytics[Analytics Service]
+    DB[(PostgreSQL)]
+    Cache[(Redis)]
+    External[Destination Websites]
+
+    User -->|Create/View URLs| Frontend
+    User -->|Click Short URL| API
+    Frontend --> API
+    Frontend --> Analytics
+    API --> DB
+    API --> Cache
+    API -->|Fetch page metadata| External
+    Analytics --> DB
+
+    classDef service fill:#4a90e2,stroke:#333,stroke-width:2px,color:#fff
+    classDef datastore fill:#336791,stroke:#333,stroke-width:2px,color:#fff
+
+    class Frontend,API,Analytics service
+    class DB,Cache datastore
+```
+
 ### Services
 
 1. **API Service** (Go - Port 7543)
@@ -71,6 +97,27 @@ Frontend → Analytics Service → PostgreSQL (complex queries)
 - Node.js 18+ (for local development)
 
 ### Database Setup
+
+#### Option 1: Using Custom Image (Recommended)
+
+The custom database image includes the schema and initialization script:
+
+```bash
+# Build the custom database image
+cd db-service
+docker build -t rashadxyz/url-shortener-db .
+
+# Run container (database is automatically initialized)
+docker run -d \
+  --name url-shortener-db \
+  -e POSTGRES_USER=urlshortener \
+  -e POSTGRES_PASSWORD=password123 \
+  -e POSTGRES_DB=urlshortener \
+  -p 5432:5432 \
+  rashadxyz/url-shortener-db
+```
+
+#### Option 2: Manual Setup with Official Postgres Image
 
 1. **Start PostgreSQL**:
 ```bash
@@ -333,6 +380,7 @@ sample-app/
 ## Docker Hub Images
 
 This project uses Docker Hub for image distribution. Images are available at:
+- `rashadxyz/url-shortener-db:latest`
 - `rashadxyz/url-shortener-api:latest`
 - `rashadxyz/url-shortener-analytics:latest`
 - `rashadxyz/url-shortener-frontend:latest`

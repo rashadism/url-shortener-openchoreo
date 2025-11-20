@@ -12,12 +12,6 @@ data:
   NAMESPACE: "default"
   ENVIRONMENT: "development"
 
-  # Image Registry & Tags
-  IMAGE_REGISTRY: "rashadxyz"
-  IMAGE_TAG: "demo"
-  POSTGRES_IMAGE: "postgres:15-alpine"
-  REDIS_IMAGE: "redis:7-alpine"
-
   # Database Configuration
   DB_USER: "urlshortener"
   DB_PASSWORD: "password123"

@@ -33,7 +33,7 @@ spec:
     projectName: url-shortener
   containers:
     main:
-      image: postgres:15-alpine
+      image: rashadxyz/url-shortener-db:latest-demo
       env:
         - key: POSTGRES_USER
           value: "urlshortener"

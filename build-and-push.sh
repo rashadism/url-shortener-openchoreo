@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Build and push Docker images to Docker Hub
+# Build and push Docker images to Docker Hub and load into k3d cluster
 # Usage: ./build-and-push.sh [DOCKER_USERNAME] [--no-cache]
 # Examples:
 #   ./build-and-push.sh                    # Use default username (rashadxyz)
@@ -12,8 +12,9 @@ set -e
 
 # Configuration
 DOCKER_USERNAME="rashadxyz"  # Default username
-VERSION="${VERSION:-demo}"
+VERSION="${VERSION:-latest-demo}"
 NO_CACHE=""
+K3D_CLUSTER="openchoreo"
 
 # Parse arguments
 for arg in "$@"; do
@@ -46,6 +47,13 @@ build_and_push() {
     echo "Pushing $image_name to Docker Hub..."
     docker push "$image_name"
 
+    echo "Loading $image_name into k3d cluster '$K3D_CLUSTER'..."
+    if k3d image import "$image_name" -c "$K3D_CLUSTER" 2>/dev/null; then
+        echo "✓ Successfully loaded into k3d cluster"
+    else
+        echo "⚠ Warning: Could not load into k3d cluster (cluster may not exist or k3d not installed)"
+    fi
+
     echo "✓ Successfully built and pushed $image_name"
 }
 
@@ -67,6 +75,7 @@ if ! docker info | grep -q "Username: $DOCKER_USERNAME"; then
 fi
 
 # Build and push all services
+build_and_push "db" "db-service"
 build_and_push "api" "api-service"
 build_and_push "analytics" "analytics-service"
 build_and_push "frontend" "frontend"
@@ -76,10 +85,13 @@ echo "======================================"
 echo "✓ All images built and pushed successfully!"
 echo "======================================"
 echo ""
-echo "Images pushed:"
+echo "Images pushed to Docker Hub:"
+echo "  - ${DOCKER_USERNAME}/url-shortener-db:${VERSION}"
 echo "  - ${DOCKER_USERNAME}/url-shortener-api:${VERSION}"
 echo "  - ${DOCKER_USERNAME}/url-shortener-analytics:${VERSION}"
 echo "  - ${DOCKER_USERNAME}/url-shortener-frontend:${VERSION}"
+echo ""
+echo "Images loaded into k3d cluster: $K3D_CLUSTER"
 echo ""
 echo "Usage examples:"
 echo "  ./build-and-push.sh myusername              # Use custom Docker Hub username"
