@@ -473,7 +473,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/containers/main/image
-        value: "rashadxyz/url-shortener-api:latest-demo"
+        value: "rashadxyz/url-shortener-api:v1"
 
   - target:
       kind: Workload
@@ -481,7 +481,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/containers/main/image
-        value: "rashadxyz/url-shortener-analytics:latest-demo"
+        value: "rashadxyz/url-shortener-analytics:v1"
 
   - target:
       kind: Workload
@@ -489,7 +489,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/containers/main/image
-        value: "rashadxyz/url-shortener-frontend:latest-demo"
+        value: "rashadxyz/url-shortener-frontend:v1"
 
   - target:
       kind: Workload
@@ -497,7 +497,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/containers/main/image
-        value: "rashadxyz/url-shortener-db:latest-demo"
+        value: "rashadxyz/url-shortener-db:v1"
 
   - target:
       kind: Workload

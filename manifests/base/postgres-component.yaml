@@ -33,7 +33,7 @@ spec:
     projectName: url-shortener
   containers:
     main:
-      image: rashadxyz/url-shortener-db:latest-demo
+      image: rashadxyz/url-shortener-db:v1
       env:
         - key: POSTGRES_USER
           value: "urlshortener"
@@ -43,17 +43,3 @@ spec:
           value: "urlshortener"
         - key: PGDATA
           value: "/var/lib/postgresql/data/pgdata"
-
----
-
-apiVersion: openchoreo.dev/v1alpha1
-kind: ComponentDeployment
-metadata:
-  name: postgres-development
-  namespace: default
-spec:
-  owner:
-    projectName: url-shortener
-    componentName: postgres
-
-  environment: development

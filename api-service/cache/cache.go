@@ -36,35 +36,67 @@ func Close() {
 
 func GetURL(shortCode string) (string, error) {
 	cacheKey := fmt.Sprintf("url:%s", shortCode)
-	return Client.Get(ctx, cacheKey).Result()
+	result, err := Client.Get(ctx, cacheKey).Result()
+	if err == nil {
+		log.Printf("[Redis] Cache HIT for key: %s", cacheKey)
+	}
+	return result, err
 }
 
 func SetURL(shortCode, longURL string, ttl time.Duration) error {
 	cacheKey := fmt.Sprintf("url:%s", shortCode)
-	return Client.Set(ctx, cacheKey, longURL, ttl).Err()
+	err := Client.Set(ctx, cacheKey, longURL, ttl).Err()
+	if err == nil {
+		log.Printf("[Redis] Saved to cache: %s (TTL: %v)", cacheKey, ttl)
+	} else {
+		log.Printf("[Redis] Failed to save to cache: %s - %v", cacheKey, err)
+	}
+	return err
 }
 
 func DeleteURL(shortCode string) error {
 	cacheKey := fmt.Sprintf("url:%s", shortCode)
-	return Client.Del(ctx, cacheKey).Err()
+	err := Client.Del(ctx, cacheKey).Err()
+	if err == nil {
+		log.Printf("[Redis] Deleted from cache: %s", cacheKey)
+	} else {
+		log.Printf("[Redis] Failed to delete from cache: %s - %v", cacheKey, err)
+	}
+	return err
 }
 
 func IncrementClickCounter(shortCode string) error {
 	counterKey := fmt.Sprintf("clicks:%s", shortCode)
-	return Client.Incr(ctx, counterKey).Err()
+	result, err := Client.Incr(ctx, counterKey).Result()
+	if err == nil {
+		log.Printf("[Redis] Incremented click counter for %s to %d", counterKey, result)
+	} else {
+		log.Printf("[Redis] Failed to increment click counter: %s - %v", counterKey, err)
+	}
+	return err
 }
 
 func GetRateLimit(key string) (int, error) {
 	rateLimitKey := fmt.Sprintf("rate_limit:%s", key)
-	return Client.Get(ctx, rateLimitKey).Int()
+	result, err := Client.Get(ctx, rateLimitKey).Int()
+	if err == nil {
+		log.Printf("[Redis] Rate limit check for %s: %d requests", rateLimitKey, result)
+	}
+	return result, err
 }
 
 func IncrementRateLimit(key string, window int) error {
 	rateLimitKey := fmt.Sprintf("rate_limit:%s", key)
 	pipe := Client.Pipeline()
-	pipe.Incr(ctx, rateLimitKey)
+	incrCmd := pipe.Incr(ctx, rateLimitKey)
 	pipe.Expire(ctx, rateLimitKey, time.Duration(window)*time.Second)
 	_, err := pipe.Exec(ctx)
+	if err == nil {
+		count := incrCmd.Val()
+		log.Printf("[Redis] Incremented rate limit for %s to %d (window: %ds)", rateLimitKey, count, window)
+	} else {
+		log.Printf("[Redis] Failed to increment rate limit: %s - %v", rateLimitKey, err)
+	}
 	return err
 }
 

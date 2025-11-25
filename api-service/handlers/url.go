@@ -47,6 +47,7 @@ func CreateURL(c *gin.Context) {
 	// Check if short code already exists in cache
 	existingURL, err := cache.GetURL(shortCode)
 	if err == nil && existingURL != "" {
+		log.Printf("[Redis] Short code %s already exists in cache", shortCode)
 		c.JSON(http.StatusConflict, gin.H{"error": "Short code already exists"})
 		return
 	}
@@ -144,7 +145,7 @@ func Redirect(c *gin.Context) {
 
 	if err == redis.Nil {
 		// Cache miss - query database
-		log.Printf("Cache miss for %s, querying database", shortCode)
+		log.Printf("[Redis] Cache MISS for short code: %s - querying database", shortCode)
 		urlID, longURL, err = database.GetURLByShortCode(shortCode)
 
 		if err == sql.ErrNoRows {
@@ -157,14 +158,16 @@ func Redirect(c *gin.Context) {
 			return
 		}
 
-		// Update cache
+		// Update cache after database query
+		log.Printf("[Redis] Populating cache for short code: %s", shortCode)
 		cache.SetURL(shortCode, longURL, cacheTTL)
 	} else if err != nil {
-		log.Printf("Redis error: %v", err)
+		log.Printf("[Redis] Error retrieving from cache: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cache error"})
 		return
 	} else {
 		// Cache hit - still need URL ID for click tracking
+		log.Printf("[Redis] Using cached URL for redirect: %s", shortCode)
 		urlID, err = database.GetURLIDByShortCode(shortCode)
 		if err != nil {
 			log.Printf("Failed to get URL ID for click tracking: %v", err)

@@ -72,19 +72,55 @@ function App() {
     }
   }
 
+  const normalizeUrl = (url) => {
+    // Trim whitespace
+    url = url.trim()
+
+    // If URL doesn't start with http:// or https://, add https://
+    if (!url.match(/^https?:\/\//i)) {
+      url = 'https://' + url
+    }
+
+    return url
+  }
+
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setMessage({
+        type: 'success',
+        text: 'Copied to clipboard!',
+        url: text
+      })
+      setTimeout(() => {
+        const fullUrl = `${window.location.origin}${text.replace(window.location.origin, '')}`
+        setMessage({
+          type: 'success',
+          text: 'Short URL created:',
+          url: fullUrl
+        })
+      }, 1000)
+    } catch (error) {
+      console.error('Failed to copy:', error)
+    }
+  }
+
   const createShortUrl = async (e) => {
     e.preventDefault()
     setLoading(true)
     setMessage(null)
 
     try {
+      // Normalize the URL before sending
+      const normalizedUrl = normalizeUrl(longUrl)
+
       const response = await fetch(`${API_URL}/api/urls`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          long_url: longUrl,
+          long_url: normalizedUrl,
           custom_code: customCode || undefined,
           username: username,
         }),
@@ -95,7 +131,11 @@ function App() {
       if (response.ok) {
         // Construct full URL from relative path for display
         const fullUrl = `${window.location.origin}${data.short_url}`
-        setMessage({ type: 'success', text: `Short URL created: ${fullUrl}` })
+        setMessage({
+          type: 'success',
+          text: 'Short URL created:',
+          url: fullUrl
+        })
         setLongUrl('')
         setCustomCode('')
         loadUrls()
@@ -181,8 +221,8 @@ function App() {
                   <div className="input-group">
                     <label>Long URL</label>
                     <input
-                      type="url"
-                      placeholder="https://example.com/very-long-url"
+                      type="text"
+                      placeholder="google.com or https://example.com/very-long-url"
                       value={longUrl}
                       onChange={(e) => setLongUrl(e.target.value)}
                       required
@@ -205,6 +245,25 @@ function App() {
                 {message && (
                   <div className={`message ${message.type}`}>
                     {message.text}
+                    {message.url && (
+                      <div className="url-result">
+                        <a
+                          href={message.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="result-link"
+                        >
+                          {message.url}
+                        </a>
+                        <button
+                          onClick={() => copyToClipboard(message.url)}
+                          className="copy-btn"
+                          title="Copy to clipboard"
+                        >
+                          📋 Copy
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

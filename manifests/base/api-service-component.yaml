@@ -47,17 +47,3 @@ spec:
           value: "100"
         - key: RATE_LIMIT_WINDOW
           value: "60"
-
----
-
-apiVersion: openchoreo.dev/v1alpha1
-kind: ComponentDeployment
-metadata:
-  name: api-service-development
-  namespace: default
-spec:
-  owner:
-    projectName: url-shortener
-    componentName: api-service
-
-  environment: development

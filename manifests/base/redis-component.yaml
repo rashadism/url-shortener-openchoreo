@@ -37,17 +37,3 @@ spec:
       env:
         - key: REDIS_REPLICATION_MODE
           value: "master"
-
----
-
-apiVersion: openchoreo.dev/v1alpha1
-kind: ComponentDeployment
-metadata:
-  name: redis-development
-  namespace: default
-spec:
-  owner:
-    projectName: url-shortener
-    componentName: redis
-
-  environment: development

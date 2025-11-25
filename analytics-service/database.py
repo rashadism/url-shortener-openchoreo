@@ -14,14 +14,9 @@ def init_database():
     global db_conn
 
     db_url = os.getenv("DATABASE_URL", "postgresql://urlshortener:password123@localhost:5432/urlshortener")
-    try:
-        db_conn = psycopg2.connect(db_url)
-        logger.info("Database connected successfully")
-        return db_conn
-    except Exception as e:
-        logger.error(f"Failed to connect to database: {e}")
-        db_conn = None
-        return None
+    db_conn = psycopg2.connect(db_url)
+    logger.info("Database connected successfully")
+    return db_conn
 
 
 def close_database():

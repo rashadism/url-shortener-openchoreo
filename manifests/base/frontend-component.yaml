@@ -41,17 +41,3 @@ spec:
       #              --build-arg VITE_ANALYTICS_URL=http://analytics-service:80 \
       #              -t rashadxyz/url-shortener-frontend:latest frontend/
       # (Services expose on port 80, with configured port as targetPort)
-
----
-
-apiVersion: openchoreo.dev/v1alpha1
-kind: ComponentDeployment
-metadata:
-  name: frontend-development
-  namespace: default
-spec:
-  owner:
-    projectName: url-shortener
-    componentName: frontend
-
-  environment: development

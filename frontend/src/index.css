@@ -190,6 +190,53 @@ input:focus {
   border-left: 4px solid #dc3545;
 }
 
+.url-result {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.result-link {
+  flex: 1;
+  color: #155724;
+  text-decoration: none;
+  font-weight: 600;
+  word-break: break-all;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.95em;
+}
+
+.result-link:hover {
+  text-decoration: underline;
+}
+
+.copy-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.copy-btn:hover {
+  background: #218838;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.copy-btn:active {
+  transform: translateY(0);
+}
+
 /* Analytics Stats */
 .stats-grid {
   display: grid;

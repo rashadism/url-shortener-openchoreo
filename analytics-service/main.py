@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
     try:
         init_database()
     except Exception as e:
-        logger.error(f"Failed to initialize database: {e}")
+        logger.error(f"Failed to initialize postgres: {e}")
         logger.warning("Service starting without database connection. Database operations will fail until connection is established.")
 
     yield

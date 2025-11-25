@@ -43,6 +43,7 @@ func RateLimit(requests, window int) gin.HandlerFunc {
 		}
 
 		if val >= requests {
+			log.Printf("[Redis] Rate limit exceeded for key: %s (%d/%d requests)", apiKey, val, requests)
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error": "Rate limit exceeded. Try again later.",
 			})
