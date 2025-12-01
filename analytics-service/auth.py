@@ -1,4 +1,5 @@
 import logging
+import uuid
 from typing import Optional
 from psycopg2.extras import RealDictCursor
 from database import get_cursor
@@ -19,10 +20,11 @@ def get_or_create_user(username: str) -> Optional[int]:
             if result:
                 return result['id']
 
-            # User doesn't exist, create new user
+            # User doesn't exist, create new user with unique API key
+            api_key = f"analytics-{uuid.uuid4()}"
             cursor.execute(
                 "INSERT INTO users (username, api_key) VALUES (%s, %s) RETURNING id",
-                (username, "")
+                (username, api_key)
             )
             result = cursor.fetchone()
             return result['id'] if result else None

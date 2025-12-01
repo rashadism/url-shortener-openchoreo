@@ -40,5 +40,9 @@ def get_cursor(cursor_factory=None):
     cursor = db_conn.cursor(cursor_factory=cursor_factory)
     try:
         yield cursor
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        raise e
     finally:
         cursor.close()
