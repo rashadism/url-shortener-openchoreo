@@ -41,3 +41,19 @@ spec:
       #              --build-arg VITE_ANALYTICS_URL=http://analytics-service:80 \
       #              -t rashadxyz/url-shortener-frontend:latest frontend/
       # (Services expose on port 80, with configured port as targetPort)
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 80
+        initialDelaySeconds: 3
+        periodSeconds: 10
+        timeoutSeconds: 3
+        failureThreshold: 3
+      livenessProbe:
+        httpGet:
+          path: /
+          port: 80
+        initialDelaySeconds: 10
+        periodSeconds: 20
+        timeoutSeconds: 3
+        failureThreshold: 3

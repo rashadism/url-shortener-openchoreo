@@ -39,3 +39,19 @@ spec:
           value: "7544"
         - key: DATABASE_URL
           value: "postgresql://urlshortener:password123@postgres:80/urlshortener"
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: 7544
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 3
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: 7544
+        initialDelaySeconds: 15
+        periodSeconds: 20
+        timeoutSeconds: 5
+        failureThreshold: 3

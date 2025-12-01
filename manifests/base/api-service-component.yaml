@@ -47,3 +47,19 @@ spec:
           value: "100"
         - key: RATE_LIMIT_WINDOW
           value: "60"
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: 7543
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 3
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: 7543
+        initialDelaySeconds: 15
+        periodSeconds: 20
+        timeoutSeconds: 5
+        failureThreshold: 3
