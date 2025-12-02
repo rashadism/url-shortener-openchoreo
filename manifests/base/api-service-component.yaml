@@ -19,6 +19,22 @@ spec:
       limits:
         cpu: "200m"
         memory: "256Mi"
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 7543
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 7543
+      initialDelaySeconds: 15
+      periodSeconds: 20
+      timeoutSeconds: 5
+      failureThreshold: 3
 
 ---
 
@@ -33,7 +49,7 @@ spec:
     projectName: url-shortener
   containers:
     main:
-      image: rashadxyz/url-shortener-api:demo
+      image: rashadxyz/url-shortener-api:v1
       env:
         - key: PORT
           value: "7543"
@@ -47,19 +63,5 @@ spec:
           value: "100"
         - key: RATE_LIMIT_WINDOW
           value: "60"
-      readinessProbe:
-        httpGet:
-          path: /health
-          port: 7543
-        initialDelaySeconds: 5
-        periodSeconds: 10
-        timeoutSeconds: 5
-        failureThreshold: 3
-      livenessProbe:
-        httpGet:
-          path: /health
-          port: 7543
-        initialDelaySeconds: 15
-        periodSeconds: 20
-        timeoutSeconds: 5
-        failureThreshold: 3
+        - key: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://opentelemetry-collector.openchoreo-observability-plane.svc.cluster.local:4318"

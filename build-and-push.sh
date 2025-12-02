@@ -12,7 +12,7 @@ set -e
 
 # Configuration
 DOCKER_USERNAME="rashadxyz"  # Default username
-VERSION="${VERSION:-v1}"
+VERSION="${VERSION:-v2}"
 NO_CACHE=""
 K3D_CLUSTER="openchoreo"
 

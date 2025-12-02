@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"api-service/cache"
@@ -8,13 +9,29 @@ import (
 	"api-service/database"
 	"api-service/handlers"
 	"api-service/middleware"
+	"api-service/tracing"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 func main() {
 	// Load configuration
 	cfg := config.Load()
+
+	// Initialize OpenTelemetry tracing
+	log.Printf("Setting up OpenTelemetry tracing to: %s", cfg.OTELExporterURL)
+	shutdown, err := tracing.Init("api-service", cfg.OTELExporterURL)
+	if err != nil {
+		log.Printf("Failed to initialize tracing: %v", err)
+	} else {
+		log.Printf("OpenTelemetry tracing successfully initialized")
+		defer func() {
+			if err := shutdown(context.Background()); err != nil {
+				log.Printf("Failed to shutdown tracer: %v", err)
+			}
+		}()
+	}
 
 	// Initialize database
 	if err := database.Init(cfg.DatabaseURL); err != nil {
@@ -36,6 +53,7 @@ func main() {
 
 	// Apply middleware
 	r.Use(middleware.CORS())
+	r.Use(otelgin.Middleware("api-service")) // OpenTelemetry auto-instrumentation
 
 	// Routes
 	r.GET("/health", handlers.HealthCheck)

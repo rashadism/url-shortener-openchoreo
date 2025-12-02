@@ -239,6 +239,23 @@ replacements:
         fieldPaths:
           - spec.containers.main.env.[key=RATE_LIMIT_WINDOW].value
 
+  # OpenTelemetry replacements
+  - source:
+      kind: ConfigMap
+      name: deployment-vars
+      fieldPath: data.OTEL_EXPORTER_OTLP_ENDPOINT
+    targets:
+      - select:
+          kind: Workload
+          name: api-service
+        fieldPaths:
+          - spec.containers.main.env.[key=OTEL_EXPORTER_OTLP_ENDPOINT].value
+      - select:
+          kind: Workload
+          name: analytics-service
+        fieldPaths:
+          - spec.containers.main.env.[key=OTEL_EXPORTER_OTLP_ENDPOINT].value
+
   # Resource limits - API Service
   - source:
       kind: ConfigMap
@@ -473,7 +490,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/containers/main/image
-        value: "rashadxyz/url-shortener-api:v1"
+        value: "rashadxyz/url-shortener-api:v122"
 
   - target:
       kind: Workload
@@ -481,7 +498,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/containers/main/image
-        value: "rashadxyz/url-shortener-analytics:v1"
+        value: "rashadxyz/url-shortener-analytics:v122"
 
   - target:
       kind: Workload
@@ -489,7 +506,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/containers/main/image
-        value: "rashadxyz/url-shortener-frontend:v1"
+        value: "rashadxyz/url-shortener-frontend:v122"
 
   - target:
       kind: Workload
@@ -497,7 +514,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/containers/main/image
-        value: "rashadxyz/url-shortener-db:v1"
+        value: "rashadxyz/url-shortener-db:v122"
 
   - target:
       kind: Workload

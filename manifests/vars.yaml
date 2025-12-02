@@ -40,6 +40,9 @@ data:
   RATE_LIMIT_REQUESTS: "100"
   RATE_LIMIT_WINDOW: "60"
 
+  # OpenTelemetry Configuration
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://opentelemetry-collector.openchoreo-observability-plane.svc.cluster.local:4318"
+
   # Resource Requests & Limits
   API_CPU_REQUEST: "50m"
   API_MEMORY_REQUEST: "128Mi"

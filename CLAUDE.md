@@ -169,8 +169,11 @@ cd api-service
 go mod download
 DATABASE_URL="postgres://urlshortener:password123@localhost:5432/urlshortener?sslmode=disable" \
 REDIS_URL="localhost:6379" \
+OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318" \
 go run main.go
 ```
+
+**Note**: `OTEL_EXPORTER_OTLP_ENDPOINT` is optional for local development. Omit if you don't have an OpenTelemetry collector running.
 
 **Build Docker Image**:
 ```bash
@@ -188,6 +191,7 @@ docker run -d \
   -e PORT=7543 \
   -e RATE_LIMIT_REQUESTS=100 \
   -e RATE_LIMIT_WINDOW=60 \
+  -e OTEL_EXPORTER_OTLP_ENDPOINT="http://host.docker.internal:4318" \
   rashadxyz/url-shortener-api
 ```
 
@@ -199,8 +203,11 @@ cd analytics-service
 pip install -r requirements.txt
 DATABASE_URL="postgresql://urlshortener:password123@localhost:5432/urlshortener" \
 PORT=7544 \
+OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318" \
 python main.py
 ```
+
+**Note**: `OTEL_EXPORTER_OTLP_ENDPOINT` is optional for local development. Omit if you don't have an OpenTelemetry collector running.
 
 **Build Docker Image**:
 ```bash
@@ -215,6 +222,7 @@ docker run -d \
   -p 7544:7544 \
   -e DATABASE_URL="postgresql://urlshortener:password123@host.docker.internal:5432/urlshortener" \
   -e PORT=7544 \
+  -e OTEL_EXPORTER_OTLP_ENDPOINT="http://host.docker.internal:4318" \
   rashadxyz/url-shortener-analytics
 ```
 
@@ -473,14 +481,37 @@ kubectl delete namespace url-shortener
 - `RATE_LIMIT_REQUESTS` - Max requests per window (default: 5)
 - `RATE_LIMIT_WINDOW` - Rate limit window in seconds (default: 60)
 - `CACHE_TTL` - Cache TTL in seconds (default: 120)
+- `OTEL_EXPORTER_OTLP_ENDPOINT` - OpenTelemetry collector endpoint (default: http://opentelemetry-collector.openchoreo-observability-plane.svc.cluster.local:4318)
 
 ### Analytics Service
 - `DATABASE_URL` - PostgreSQL connection string
 - `PORT` - Server port (default: 7544)
+- `OTEL_EXPORTER_OTLP_ENDPOINT` - OpenTelemetry collector endpoint (default: http://opentelemetry-collector.openchoreo-observability-plane.svc.cluster.local:4318)
 
 ### Frontend
 - No environment variables needed
 - Uses nginx reverse proxy with relative URLs for backend communication
+
+## OpenTelemetry Instrumentation
+
+Both API and Analytics services are instrumented with OpenTelemetry for distributed tracing.
+
+### API Service (Go)
+- Uses `otelgin` middleware for automatic Gin instrumentation
+- Traces all HTTP requests including handlers and middleware
+- Exports traces via OTLP HTTP to the collector endpoint
+
+### Analytics Service (Python)
+- Uses `opentelemetry-instrumentation-fastapi` for automatic FastAPI instrumentation
+- Traces all HTTP requests and responses
+- Exports traces via OTLP HTTP to the collector endpoint
+
+### Configuration
+- Set `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable to point to your OpenTelemetry collector
+- Default: `http://opentelemetry-collector.openchoreo-observability-plane.svc.cluster.local:4318`
+- For cross-namespace access, use fully qualified DNS: `<service>.<namespace>.svc.cluster.local`
+- Traces are exported automatically with service names: `api-service` and `analytics-service`
+- Context propagation is enabled for distributed tracing across services
 
 ## Failure Scenarios (RCA Testing)
 

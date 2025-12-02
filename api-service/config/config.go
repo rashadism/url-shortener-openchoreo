@@ -6,12 +6,13 @@ import (
 )
 
 type Config struct {
-	DatabaseURL       string
-	RedisURL          string
-	Port              string
-	CacheTTL          int // Cache TTL in seconds
-	RateLimitRequests int
-	RateLimitWindow   int
+	DatabaseURL         string
+	RedisURL            string
+	Port                string
+	CacheTTL            int // Cache TTL in seconds
+	RateLimitRequests   int
+	RateLimitWindow     int
+	OTELExporterURL     string
 }
 
 func Load() *Config {
@@ -22,6 +23,7 @@ func Load() *Config {
 		CacheTTL:          getEnvInt("CACHE_TTL", 120), // Default 2 minutes
 		RateLimitRequests: getEnvInt("RATE_LIMIT_REQUESTS", 5),
 		RateLimitWindow:   getEnvInt("RATE_LIMIT_WINDOW", 60),
+		OTELExporterURL:   getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://opentelemetry-collector.openchoreo-observability-plane.svc.cluster.local:4318"),
 	}
 }
 
